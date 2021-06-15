@@ -1,45 +1,56 @@
 package client;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
 
 public class SocketController {
 
-	int portServer;
+	String userName;
+	ServerData connectedServer;
 	Socket s;
 	BufferedReader receiver;
 	BufferedWriter sender;
 
-	public SocketController(String name, String pass) {
+	public SocketController(String name, ServerData connectedServer) {
 		try {
-			s = new Socket("localhost", 2190);
+			this.userName = name;
+			this.connectedServer = connectedServer;
+			s = new Socket("localhost", connectedServer.port);
 			InputStream is = s.getInputStream();
 			receiver = new BufferedReader(new InputStreamReader(is));
 			OutputStream os = s.getOutputStream();
 			sender = new BufferedWriter(new OutputStreamWriter(os));
 
-			sender.write(name);
+		} catch (IOException e1) {
+			Main.connectServerScreen.loginResultAction("closed");
+		}
+	}
+
+	public void Login() {
+		try {
+			sender.write("new login");
 			sender.newLine();
-			sender.write(pass);
+			sender.write(userName);
 			sender.newLine();
 			sender.flush();
 
 			String loginResult = receiver.readLine();
 			if (loginResult.equals("login success")) {
-				Main.loginScreen.loginResultAction(true);
+				Main.connectServerScreen.loginResultAction("success");
 
 				int serverOnlineAccountCount = Integer.parseInt(receiver.readLine());
 				for (int i = 0; i < serverOnlineAccountCount; i++) {
 					Room newRoom = new Room();
 					newRoom.otherUser = receiver.readLine();
-					newRoom.messages = new ArrayList<Room.Message>();
+					newRoom.messages = new ArrayList<MessageData>();
 					Main.mainScreen.rooms.add(newRoom);
 				}
 				if (Main.mainScreen.chattingToUser == null && Main.mainScreen.rooms.size() > 0)
 					Main.mainScreen.chattingToUser = Main.mainScreen.rooms.get(0).otherUser;
 				Main.mainScreen.updateRoomJList();
+				Main.mainScreen.updateServerData(); 
 
 				new Thread(() -> {
 					try {
@@ -50,25 +61,27 @@ public class SocketController {
 								String who = receiver.readLine();
 								Room newRoom = new Room();
 								newRoom.otherUser = who;
-								newRoom.messages = new ArrayList<Room.Message>();
+								newRoom.messages = new ArrayList<MessageData>();
 								Main.mainScreen.rooms.add(newRoom);
 
 								if (Main.mainScreen.chattingToUser == null)
 									Main.mainScreen.chattingToUser = newRoom.otherUser;
 
 								Main.mainScreen.updateRoomJList();
+								Main.mainScreen.updateServerData(); 
 								break;
 							}
 							case "user quit": {
 								String whoQuit = receiver.readLine();
 								Main.mainScreen.rooms.remove(Main.mainScreen.findRoom(whoQuit));
 								Main.mainScreen.updateRoomJList();
+								Main.mainScreen.updateServerData(); 
 								break;
 							}
 							case "send from user": {
 								String who = receiver.readLine();
 								String content = receiver.readLine();
-								Main.mainScreen.addToMessageJList(who, who, content);
+								Main.mainScreen.addNewMessage(who, who, content);
 								break;
 							}
 							default:
@@ -80,14 +93,16 @@ public class SocketController {
 					}
 				}).start();
 			} else
-				Main.loginScreen.loginResultAction(false);
+				Main.connectServerScreen.loginResultAction("existed");
 
 		} catch (IOException e1) {
-			System.out.println("Server closed");
+
 		}
 	}
 
 	public void sendMessageToUser(String who, String content) {
+		if (who == null)
+			return;
 		try {
 			sender.write("send to user");
 			sender.newLine();
@@ -98,6 +113,64 @@ public class SocketController {
 			sender.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	public void sendFileToUser(String who, String fileName, byte[] content) {
+
+	}
+
+	public static boolean serverOnline(int port) {
+		try {
+			Socket s = new Socket();
+			s.connect(new InetSocketAddress("localhost", port), 300);
+			s.close();
+			return true;
+		} catch (IOException ex) {
+			return false;
+		}
+	}
+
+	public static String serverName(int port) {
+
+		try {
+			Socket s = new Socket("localhost", port);
+			InputStream is = s.getInputStream();
+			BufferedReader receiver = new BufferedReader(new InputStreamReader(is));
+			OutputStream os = s.getOutputStream();
+			BufferedWriter sender = new BufferedWriter(new OutputStreamWriter(os));
+
+			sender.write("get name");
+			sender.newLine();
+			sender.flush();
+
+			String name = receiver.readLine();
+
+			s.close();
+			return name;
+		} catch (IOException ex) {
+			return "";
+		}
+	}
+
+	public static int serverConnectedAccountCount(int port) {
+		try {
+			Socket s = new Socket("localhost", port);
+			InputStream is = s.getInputStream();
+			BufferedReader receiver = new BufferedReader(new InputStreamReader(is));
+			OutputStream os = s.getOutputStream();
+			BufferedWriter sender = new BufferedWriter(new OutputStreamWriter(os));
+
+			sender.write("get connected count");
+			sender.newLine();
+			sender.flush();
+
+			int count = Integer.parseInt(receiver.readLine());
+
+			s.close();
+			return count;
+		} catch (IOException ex) {
+			return 0;
 		}
 	}
 }

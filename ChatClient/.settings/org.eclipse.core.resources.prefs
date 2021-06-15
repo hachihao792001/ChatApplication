@@ -1,4 +1,8 @@
 eclipse.preferences.version=1
+encoding//src/client/ConnectServerScreen.java=UTF-8
+encoding//src/client/FileManager.java=UTF-8
 encoding//src/client/LoginScreen.java=UTF-8
 encoding//src/client/Main.java=UTF-8
 encoding//src/client/MainScreen.java=UTF-8
+encoding//src/client/MessagePanel.java=UTF-8
+encoding//src/client/SocketController.java=UTF-8

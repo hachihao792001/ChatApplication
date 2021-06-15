@@ -7,12 +7,15 @@ import java.util.List;
 
 public class SocketController {
 
+	public String serverName;
+	public int serverPort;
 	ServerSocket s;
-	public List<Client> connectedClient = new ArrayList<Client>();
+	public List<Client> connectedClient;
 
 	public void OpenSocket(int port) {
 		try {
 			s = new ServerSocket(port);
+			connectedClient = new ArrayList<Client>();
 
 			new Thread(() -> {
 				try {

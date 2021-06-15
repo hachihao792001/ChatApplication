@@ -18,8 +18,6 @@ public class LoginScreen extends JFrame implements ActionListener {
 	private JLabel passLabel;
 	private JTextField passText;
 
-	public String loggedInUser;
-
 	public LoginScreen() {
 		GBCBuilder gbc;
 		JPanel registerContent = new JPanel(new GridBagLayout());
@@ -43,13 +41,13 @@ public class LoginScreen extends JFrame implements ActionListener {
 		gbc = new GBCBuilder(1, 1);
 		registerContent.add(Title, gbc.setSpan(2, 1).setInsets(20).setFill(GridBagConstraints.BOTH).setWeight(1, 0));
 
-		userNameLabel.setText("Tên");
+		userNameLabel.setText("Tài khoản");
 		registerContent.add(userNameLabel, gbc.setGrid(1, 2).setSpan(1, 1).setInsets(0, 20, 10, 0).setWeight(0, 0));
 
 		userNameText.setText("");
 		registerContent.add(userNameText, gbc.setGrid(2, 2).setInsets(0, 20, 10, 20).setWeight(1, 0));
 
-		passLabel.setText("Port server: ");
+		passLabel.setText("Mật khẩu: ");
 		registerContent.add(passLabel, gbc.setGrid(1, 3).setInsets(0, 20, 20, 0).setWeight(0, 0));
 
 		passText.setText("");
@@ -71,18 +69,8 @@ public class LoginScreen extends JFrame implements ActionListener {
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		Main.socketController = new SocketController(userNameText.getText(), passText.getText());
+		
 	}
 
-	public void loginResultAction(boolean success) {
-		if (success) {
-			loggedInUser = userNameText.getText();
-			this.setVisible(false);
-			this.dispose();
-			Main.mainScreen = new MainScreen();
-		} else {
-			JOptionPane.showMessageDialog(this, "Tài khoản hoặc mật khẩu không đúng", "Thông báo",
-					JOptionPane.WARNING_MESSAGE);
-		}
-	}
+	
 }

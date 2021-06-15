@@ -11,16 +11,22 @@ public class MainScreen extends JFrame implements ActionListener {
 	private static final long serialVersionUID = 1L;
 
 	JLabel portLabel;
+	JTextField portText;
+	JLabel serverNameLabel;
+	JTextField serverNameText;
+
 	static JTable clientTable;
 	JButton openCloseButton;
-	int port = 2190;
 	boolean isSocketOpened = false;
 
 	public MainScreen() {
 		JPanel mainContent = new JPanel(new GridBagLayout());
 		GBCBuilder gbc = new GBCBuilder(1, 1).setInsets(5);
 
-		portLabel = new JLabel("Port: " + port);
+		portLabel = new JLabel("Port: ");
+		portText = new JTextField();
+		serverNameLabel = new JLabel("Tên server: ");
+		serverNameText = new JTextField();
 		openCloseButton = new JButton("Mở server");
 		openCloseButton.addActionListener(this);
 
@@ -29,9 +35,13 @@ public class MainScreen extends JFrame implements ActionListener {
 		JScrollPane clientScrollPane = new JScrollPane(clientTable);
 		clientScrollPane.setBorder(BorderFactory.createTitledBorder("Danh sách client đang kết nối"));
 
-		mainContent.add(portLabel, gbc);
-		mainContent.add(clientScrollPane, gbc.setGrid(1, 2).setFill(GridBagConstraints.BOTH).setWeight(1, 1));
-		mainContent.add(openCloseButton, gbc.setGrid(1, 3).setWeight(1, 0));
+		mainContent.add(portLabel, gbc.setFill(GridBagConstraints.BOTH));
+		mainContent.add(portText, gbc.setGrid(2, 1).setWeight(1, 0));
+		mainContent.add(serverNameLabel, gbc.setGrid(3, 1).setWeight(0, 0));
+		mainContent.add(serverNameText, gbc.setGrid(4, 1).setWeight(1, 0));
+		mainContent.add(clientScrollPane,
+				gbc.setGrid(1, 2).setFill(GridBagConstraints.BOTH).setWeight(1, 1).setSpan(4, 1));
+		mainContent.add(openCloseButton, gbc.setGrid(1, 3).setWeight(1, 0).setSpan(4, 1));
 		mainContent.setPreferredSize(new Dimension(250, 200));
 
 		this.setTitle("Server chat");
@@ -47,9 +57,26 @@ public class MainScreen extends JFrame implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		if (!isSocketOpened) {
-			Main.socketController.OpenSocket(port);
-			isSocketOpened = true;
-			openCloseButton.setText("Đóng server");
+			try {
+				if (serverNameText.getText().isEmpty())
+					JOptionPane.showMessageDialog(this, "Tên server không được trống", "Lỗi",
+							JOptionPane.WARNING_MESSAGE);
+				else if (portText.getText().isEmpty())
+					JOptionPane.showMessageDialog(this, "Port không được trống", "Lỗi", JOptionPane.WARNING_MESSAGE);
+				else {
+
+					Main.socketController.serverName = serverNameText.getText();
+					Main.socketController.serverPort = Integer.parseInt(portText.getText());
+
+					Main.socketController.OpenSocket(Main.socketController.serverPort);
+					isSocketOpened = true;
+					openCloseButton.setText("Đóng server");
+				}
+
+			} catch (NumberFormatException ex) {
+				JOptionPane.showMessageDialog(this, "Port phải là 1 số nguyên dương", "Lỗi",
+						JOptionPane.WARNING_MESSAGE);
+			}
 		} else {
 			Main.socketController.CloseSocket();
 			isSocketOpened = false;
@@ -61,7 +88,7 @@ public class MainScreen extends JFrame implements ActionListener {
 
 		Object[][] tableContent = new Object[Main.socketController.connectedClient.size()][2];
 		for (int i = 0; i < Main.socketController.connectedClient.size(); i++) {
-			tableContent[i][0] = Main.socketController.connectedClient.get(i).account.getUserName();
+			tableContent[i][0] = Main.socketController.connectedClient.get(i).userName;
 			tableContent[i][1] = Main.socketController.connectedClient.get(i).port;
 		}
 
