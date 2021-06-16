@@ -76,7 +76,7 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 				break;
 			String serverState = serverTable.getValueAt(serverTable.getSelectedRow(), 3).toString();
 			if (serverState.equals("Không hoạt động")) {
-				JOptionPane.showMessageDialog(serverTable, "Server không hoạt động", "Thông báo",
+				JOptionPane.showMessageDialog(this, "Server không hoạt động", "Thông báo",
 						JOptionPane.INFORMATION_MESSAGE);
 				break;
 			}
@@ -84,6 +84,7 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			JDialog askNameDialog = new JDialog();
 
 			nameText = new JTextField();
+			nameText.setPreferredSize(new Dimension(250, 30));
 			JButton joinServerButton = new JButton("Vào");
 			joinServerButton.addActionListener(new ActionListener() {
 				@Override
@@ -128,18 +129,23 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			addServerButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					int port = Integer.parseInt(portText.getText());
-					String serverName = SocketController.serverName(port);
+					try {
+						int port = Integer.parseInt(portText.getText());
+						String serverName = SocketController.serverName(port);
 
-					if (serverList == null)
-						serverList = new ArrayList<ServerData>();
-					serverList.add(new ServerData(serverName, port));
+						if (serverList == null)
+							serverList = new ArrayList<ServerData>();
+						serverList.add(new ServerData(serverName, port));
 
-					FileManager.setServerList(serverList);
-					updateServerTable();
+						FileManager.setServerList(serverList);
+						updateServerTable();
 
-					askPortDialog.setVisible(false);
-					askPortDialog.dispose();
+						askPortDialog.setVisible(false);
+						askPortDialog.dispose();
+					} catch (NumberFormatException ex) {
+						JOptionPane.showMessageDialog(askPortDialog, "Port phải là 1 số nguyên dương", "Thông báo",
+								JOptionPane.INFORMATION_MESSAGE);
+					}
 				}
 			});
 
@@ -185,8 +191,10 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 
 			JLabel serverNameLabel = new JLabel("Biệt danh server: ");
 			JTextField serverNameText = new JTextField(edittingServer.nickName);
+			serverNameText.setPreferredSize(new Dimension(150, 20));
 			JLabel portLabel = new JLabel("Port: ");
 			JTextField portText = new JTextField("" + edittingServer.port);
+			portText.setPreferredSize(new Dimension(150, 20));
 			JButton editButton = new JButton("Sửa");
 			editButton.addActionListener(new ActionListener() {
 				@Override
@@ -213,7 +221,7 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			});
 
 			JPanel editContent = new JPanel(new GridBagLayout());
-			GBCBuilder gbc = new GBCBuilder(1, 1).setFill(GridBagConstraints.BOTH).setWeight(1, 0);
+			GBCBuilder gbc = new GBCBuilder(1, 1).setFill(GridBagConstraints.BOTH).setWeight(1, 0).setInsets(5);
 			editContent.add(serverNameLabel, gbc);
 			editContent.add(serverNameText, gbc.setGrid(2, 1));
 			editContent.add(portLabel, gbc.setGrid(1, 2));
