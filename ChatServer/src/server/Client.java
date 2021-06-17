@@ -3,6 +3,7 @@ package server;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.net.Socket;
+import java.util.List;
 
 public class Client {
 	public String userName;
@@ -20,5 +21,13 @@ public class Client {
 	}
 
 	public Client() {
+	}
+
+	public static Client findClient(List<Client> clientList, String userName) {
+		for (Client client : clientList) {
+			if (client.userName.equals(userName))
+				return client;
+		}
+		return null;
 	}
 }

@@ -11,11 +11,13 @@ public class SocketController {
 	public int serverPort;
 	ServerSocket s;
 	public List<Client> connectedClient;
+	public List<Room> allRooms;
 
 	public void OpenSocket(int port) {
 		try {
 			s = new ServerSocket(port);
 			connectedClient = new ArrayList<Client>();
+			allRooms = new ArrayList<Room>();
 
 			new Thread(() -> {
 				try {

@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
 
 public class SocketController {
 
@@ -16,7 +17,12 @@ public class SocketController {
 
 	Thread receiveAndProcessThread;
 
+	public List<String> onlineUsers;
+	public List<Room> allRooms;
+
 	public SocketController(String name, ServerData connectedServer) {
+		onlineUsers = new ArrayList<String>();
+		allRooms = new ArrayList<Room>();
 		try {
 			this.userName = name;
 			this.connectedServer = connectedServer;
@@ -44,16 +50,11 @@ public class SocketController {
 				Main.connectServerScreen.loginResultAction("success");
 
 				int serverOnlineAccountCount = Integer.parseInt(receiver.readLine());
-				for (int i = 0; i < serverOnlineAccountCount; i++) {
-					Room newRoom = new Room();
-					newRoom.otherUser = receiver.readLine();
-					newRoom.messages = new ArrayList<MessageData>();
-					Main.mainScreen.rooms.add(newRoom);
-				}
-				if (Main.mainScreen.chattingToUser == null && Main.mainScreen.rooms.size() > 0)
-					Main.mainScreen.chattingToUser = Main.mainScreen.rooms.get(0).otherUser;
-				Main.mainScreen.updateRoomJList();
+				for (int i = 0; i < serverOnlineAccountCount; i++)
+					onlineUsers.add(receiver.readLine());
+
 				Main.mainScreen.updateServerData();
+				Main.mainScreen.updateOnlineUserJList();
 
 				receiveAndProcessThread = new Thread(() -> {
 					try {
@@ -62,29 +63,37 @@ public class SocketController {
 							System.out.println("Header " + header);
 
 							switch (header) {
-							case "new client": {
+							case "new user online": {
 								String who = receiver.readLine();
-								Room newRoom = new Room();
-								newRoom.otherUser = who;
-								newRoom.messages = new ArrayList<MessageData>();
-								Main.mainScreen.rooms.add(newRoom);
-
-								if (Main.mainScreen.chattingToUser == null)
-									Main.mainScreen.chattingToUser = newRoom.otherUser;
-
-								Main.mainScreen.updateRoomJList();
+								onlineUsers.add(who);
 								Main.mainScreen.updateServerData();
+								Main.mainScreen.updateOnlineUserJList();
 								break;
 							}
 							case "user quit": {
 								String whoQuit = receiver.readLine();
-								Main.mainScreen.rooms.remove(Main.mainScreen.findRoom(whoQuit));
-								Main.mainScreen.updateRoomJList();
+								onlineUsers.remove(whoQuit);
 								Main.mainScreen.updateServerData();
+								Main.mainScreen.updateOnlineUserJList();
 								break;
 							}
-							case "send from user": {
-								String who = receiver.readLine();
+							case "new room": {
+								int roomID = Integer.parseInt(receiver.readLine());
+								String whoCreate = receiver.readLine();
+								String name = receiver.readLine();
+								int roomUserCount = Integer.parseInt(receiver.readLine());
+								List<String> users = new ArrayList<String>();
+								for (int i = 0; i < roomUserCount; i++)
+									users.add(receiver.readLine());
+
+								Room newRoom = new Room(roomID, name, users);
+								Main.socketController.allRooms.add(newRoom);
+								Main.mainScreen.newRoomTab(newRoom);
+								break;
+							}
+							case "text from user to room": {
+								String user = receiver.readLine();
+								int roomID = Integer.parseInt(receiver.readLine());
 								String content = "";
 								char c;
 								do {
@@ -92,14 +101,15 @@ public class SocketController {
 									if (c != '\0')
 										content += c;
 								} while (c != '\0');
-								Main.mainScreen.addNewMessage(who, "text", who, content);
+								Main.mainScreen.addNewMessage(roomID, "text", user, content);
 								break;
 							}
-							case "file from user": {
-								String who = receiver.readLine();
+							case "file from user to room": {
+								String user = receiver.readLine();
+								int roomID = Integer.parseInt(receiver.readLine());
 								String fileName = receiver.readLine();
-								System.out.println("Recevie file " + fileName + " from " + who);
-								Main.mainScreen.addNewMessage(who, "file", who, fileName);
+								System.out.println("Recevie file " + fileName + " from " + user + " to room " + roomID);
+								Main.mainScreen.addNewMessage(roomID, "file", user, fileName);
 								break;
 							}
 							case "response download file": {
@@ -138,13 +148,11 @@ public class SocketController {
 		}
 	}
 
-	public void sendMessageToUser(String who, String content) {
-		if (who == null)
-			return;
+	public void sendTextToRoom(int roomID, String content) {
 		try {
-			sender.write("send to user");
+			sender.write("text to room");
 			sender.newLine();
-			sender.write(who);
+			sender.write("" + roomID);
 			sender.newLine();
 			sender.write(content);
 			sender.write('\0');
@@ -154,19 +162,17 @@ public class SocketController {
 		}
 	}
 
-	public void sendFileToUser(String who, String content, String filePath) {
-		if (who == null)
-			return;
+	public void sendFileToRoom(int roomID, String fileName, String filePath) {
 		try {
-			System.out.println("Send file " + content + " to " + who);
+			System.out.println("Send file " + fileName + " to room " + roomID);
 
 			File file = new File(filePath);
 
-			sender.write("file to user");
+			sender.write("file to room");
 			sender.newLine();
-			sender.write(who);
+			sender.write("" + roomID);
 			sender.newLine();
-			sender.write(content);
+			sender.write(fileName);
 			sender.newLine();
 			sender.write("" + file.length());
 			sender.newLine();
@@ -193,10 +199,48 @@ public class SocketController {
 	public void downloadFile(String fileName, String downloadToPath) {
 		this.downloadToPath = downloadToPath;
 		try {
-			sender.write("download file");
+			sender.write("request download file");
 			sender.newLine();
 			sender.write(fileName);
 			sender.newLine();
+			sender.flush();
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		}
+	}
+
+	public void createPrivateRoom(String otherUser) {
+		try {
+			sender.write("request create room");
+			sender.newLine();
+			sender.write(otherUser); // room name
+			sender.newLine();
+			sender.write("2");
+			sender.newLine();
+			sender.write(userName);
+			sender.newLine();
+			sender.write(otherUser);
+			sender.newLine();
+			sender.flush();
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		}
+	}
+
+	public void createGroup(String groupName, List<String> otherUsers) {
+		try {
+			sender.write("request create room");
+			sender.newLine();
+			sender.write(groupName);
+			sender.newLine();
+			sender.write("" + (otherUsers.size() + 1));
+			sender.newLine();
+			sender.write(userName);
+			sender.newLine();
+			for (String user : otherUsers) {
+				sender.write(user);
+				sender.newLine();
+			}
 			sender.flush();
 		} catch (IOException ex) {
 			ex.printStackTrace();

@@ -46,6 +46,7 @@ public class MainScreen extends JFrame implements ActionListener {
 
 		this.setTitle("Server chat");
 		this.setContentPane(mainContent);
+		this.getRootPane().setDefaultButton(openCloseButton);
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		this.pack();
 		this.setLocationRelativeTo(null);

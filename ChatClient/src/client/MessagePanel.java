@@ -8,90 +8,70 @@ import java.io.IOException;
 import java.util.Random;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
-import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableCellRenderer;
 
-public class MessagePanel extends AbstractCellEditor implements TableCellEditor, TableCellRenderer {
+public class MessagePanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 	public MessageData data;
 
-	JPanel panel;
-	JLabel whoSendLabel;
-	JPanel contentPanel;
+	public MessagePanel(MessageData data) {
+		this.data = data;
+		Dimension thisMaxSize = this.getMaximumSize();
 
-	JTextArea textContent;
-	JPanel filePanel;
-	JLabel fileIcon;
-	JLabel fileNameLabel;
+		JLabel whoSendLabel = new JLabel(
+				(data.whoSend.equals(Main.socketController.userName) ? "Bạn" : data.whoSend) + ": ");
+		whoSendLabel.setFont(new Font("Dialog", Font.BOLD, 15));
 
-	public MessagePanel() {
-		whoSendLabel = new JLabel();
-		contentPanel = new JPanel();
-		contentPanel.setLayout(new CardLayout());
-		FlowLayout flowLayout = new FlowLayout();
-		flowLayout.setAlignment(FlowLayout.LEADING);
-		panel = new JPanel(new GridBagLayout());
-		panel.add(whoSendLabel,
-				new GBCBuilder(1, 1).setAnchor(GridBagConstraints.FIRST_LINE_START).setFill(GridBagConstraints.NONE));
-		panel.add(contentPanel, new GBCBuilder(2, 1).setWeight(1, 0).setFill(GridBagConstraints.BOTH));
-		panel.setBackground(null);
+		JPanel contentPanel = new JPanel();
+		contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.X_AXIS));
+		contentPanel.setBackground(Color.white);
 
-		textContent = new JTextArea();
-		textContent.setEditable(false);
-
-		filePanel = new JPanel(new GridBagLayout());
-		filePanel.setBackground(null);
-		fileIcon = new JLabel();
-		fileNameLabel = new JLabel();
-		filePanel.add(fileIcon, new GBCBuilder(1, 1).setWeight(0, 0).setAnchor(GridBagConstraints.LINE_START)
-				.setFill(GridBagConstraints.NONE));
-		filePanel.add(fileNameLabel, new GBCBuilder(2, 1).setWeight(1, 0).setAnchor(GridBagConstraints.LINE_START));
-		filePanel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-		filePanel.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				String fileName = data.content;
-				String extension = fileName.split("\\.")[1];
-
-				JFileChooser jfc = new JFileChooser();
-				jfc.setDialogTitle("Chọn đường dẫn download");
-				jfc.setFileFilter(new FileNameExtensionFilter(extension.toUpperCase() + " files", extension));
-				jfc.setSelectedFile(new File(fileName));
-				int result = jfc.showSaveDialog(contentPanel);
-				jfc.setVisible(true);
-
-				if (result == JFileChooser.APPROVE_OPTION) {
-					String filePath = jfc.getSelectedFile().getAbsolutePath();
-					if (!filePath.endsWith("." + extension))
-						filePath += "." + extension;
-
-					Main.socketController.downloadFile(fileName, filePath);
-				}
-			}
-		});
-
-		contentPanel.add(textContent, "text");
-		contentPanel.add(filePanel, "file");
-	}
-
-	public void updateGUI() {
-
-		whoSendLabel.setText((data.whoSend.equals(Main.socketController.userName) ? "Bạn" : data.whoSend) + ": ");
 		if (data.type.equals("text")) {
 
-			textContent.setText(data.content);
-			int lineCount = data.content.split("\r\n|\r|\n").length;
-			//textContent.setMinimumSize(new Dimension(100, 35 * lineCount));
+			JTextArea textContent = new JTextArea(data.content);
+			textContent.setFont(new Font("Dialog", Font.PLAIN, 15));
+			textContent.setEditable(false);
+			// textContent.setBackground(new Color(52, 149, 235));
+			// textContent.setAlignmentY(SwingConstants.NORTH);
 
-			((CardLayout) contentPanel.getLayout()).show(contentPanel, "text");
+			contentPanel.add(textContent);
+
+			int lineCount = data.content.split("\r\n|\r|\n").length;
+			if (lineCount > 1) {
+				this.setMaximumSize(new Dimension(thisMaxSize.width, 19 * lineCount));
+			} else {
+				this.setMaximumSize(new Dimension(thisMaxSize.width, 25));
+			}
 
 		} else if (data.type.equals("file")) {
 
+			contentPanel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+			contentPanel.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					String fileName = data.content;
+					String extension = fileName.split("\\.")[1];
+
+					JFileChooser jfc = new JFileChooser();
+					jfc.setDialogTitle("Chọn đường dẫn download");
+					jfc.setFileFilter(new FileNameExtensionFilter(extension.toUpperCase() + " files", extension));
+					jfc.setSelectedFile(new File(fileName));
+					int result = jfc.showSaveDialog(contentPanel);
+					jfc.setVisible(true);
+
+					if (result == JFileChooser.APPROVE_OPTION) {
+						String filePath = jfc.getSelectedFile().getAbsolutePath();
+						if (!filePath.endsWith("." + extension))
+							filePath += "." + extension;
+
+						Main.socketController.downloadFile(fileName, filePath);
+					}
+				}
+			});
+
+			JLabel fileIcon = new JLabel();
 			try {
 				String extension = data.content.split("\\.")[1];
 				Random r = new Random();
@@ -102,35 +82,25 @@ public class MessagePanel extends AbstractCellEditor implements TableCellEditor,
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			fileNameLabel.setText("<HTML><U>" + data.content + "</U></HTML>");
 
-			((CardLayout) contentPanel.getLayout()).show(contentPanel, "file");
+			JLabel fileNameLabel = new JLabel("<HTML><U>" + data.content + "</U></HTML>");
+			fileNameLabel.setFont(new Font("Dialog", Font.PLAIN, 15));
 
+			contentPanel.add(fileIcon, new GBCBuilder(1, 1).setWeight(0, 0).setAnchor(GridBagConstraints.LINE_START)
+					.setFill(GridBagConstraints.NONE).setInsets(0, 0, 0, 5));
+			contentPanel.add(fileNameLabel,
+					new GBCBuilder(2, 1).setWeight(1, 0).setAnchor(GridBagConstraints.LINE_START));
+
+			this.setMaximumSize(new Dimension(thisMaxSize.width, 30));
 		}
 
-		panel.validate();
-		panel.repaint();
+		this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+		whoSendLabel.setAlignmentY(Component.TOP_ALIGNMENT);
+		this.add(whoSendLabel);
+		contentPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+		this.add(contentPanel);
+		this.setBackground(null);
+
 	}
 
-	@Override
-	public Object getCellEditorValue() {
-		return null;
-	}
-
-	@Override
-	public Component getTableCellEditorComponent(JTable arg0, Object value, boolean arg2, int row, int column) {
-		System.out.println("Row " + row);
-		this.data = Main.mainScreen.findRoom(Main.mainScreen.chattingToUser).messages.get(row);
-		updateGUI();
-		return panel;
-	}
-
-	@Override
-	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
-			int row, int column) {
-		System.out.println("Row " + row);
-		this.data = Main.mainScreen.findRoom(Main.mainScreen.chattingToUser).messages.get(row);
-		updateGUI();
-		return panel;
-	}
 }
