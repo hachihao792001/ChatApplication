@@ -3,6 +3,9 @@ package server;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
@@ -23,6 +26,12 @@ public class MainScreen extends JFrame implements ActionListener {
 		JPanel mainContent = new JPanel(new GridBagLayout());
 		GBCBuilder gbc = new GBCBuilder(1, 1).setInsets(5);
 
+		JLabel ipLabel = new JLabel("IP: ");
+		try {
+			ipLabel.setText("IP: " + InetAddress.getLocalHost().getHostAddress());
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
 		portLabel = new JLabel("Port: ");
 		portText = new JTextField();
 		serverNameLabel = new JLabel("Tên server: ");
@@ -35,14 +44,15 @@ public class MainScreen extends JFrame implements ActionListener {
 		JScrollPane clientScrollPane = new JScrollPane(clientTable);
 		clientScrollPane.setBorder(BorderFactory.createTitledBorder("Danh sách client đang kết nối"));
 
-		mainContent.add(portLabel, gbc.setFill(GridBagConstraints.BOTH));
-		mainContent.add(portText, gbc.setGrid(2, 1).setWeight(1, 0));
-		mainContent.add(serverNameLabel, gbc.setGrid(3, 1).setWeight(0, 0));
-		mainContent.add(serverNameText, gbc.setGrid(4, 1).setWeight(1, 0));
+		mainContent.add(ipLabel, gbc.setFill(GridBagConstraints.BOTH).setWeight(0, 0).setSpan(1, 1));
+		mainContent.add(portLabel, gbc.setGrid(2, 1).setWeight(0, 0).setSpan(1, 1));
+		mainContent.add(portText, gbc.setGrid(3, 1).setWeight(1, 0));
+		mainContent.add(serverNameLabel, gbc.setGrid(1, 2).setWeight(0, 0).setSpan(1, 1));
+		mainContent.add(serverNameText, gbc.setGrid(2, 2).setWeight(1, 0).setSpan(2, 1));
 		mainContent.add(clientScrollPane,
-				gbc.setGrid(1, 2).setFill(GridBagConstraints.BOTH).setWeight(1, 1).setSpan(4, 1));
-		mainContent.add(openCloseButton, gbc.setGrid(1, 3).setWeight(1, 0).setSpan(4, 1));
-		mainContent.setPreferredSize(new Dimension(250, 200));
+				gbc.setGrid(1, 3).setFill(GridBagConstraints.BOTH).setWeight(1, 1).setSpan(4, 1));
+		mainContent.add(openCloseButton, gbc.setGrid(1, 4).setWeight(1, 0).setSpan(4, 1));
+		mainContent.setPreferredSize(new Dimension(250, 300));
 
 		this.setTitle("Server chat");
 		this.setContentPane(mainContent);

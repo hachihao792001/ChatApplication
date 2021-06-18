@@ -29,7 +29,7 @@ public class FileManager {
 
 				while (line != null && !line.isEmpty()) {
 					String[] serverData = line.split(",");
-					serverList.add(new ServerData(serverData[0], Integer.parseInt(serverData[1])));
+					serverList.add(new ServerData(serverData[0], serverData[1], Integer.parseInt(serverData[2])));
 					line = reader.readLine();
 				}
 			} catch (Exception num) {
@@ -51,7 +51,7 @@ public class FileManager {
 			writer = new BufferedWriter(new FileWriter(new File(SERVER_FILE)));
 
 			for (ServerData serverData : serverList)
-				writer.write(serverData.nickName + "," + serverData.port + "\n");
+				writer.write(serverData.nickName + "," + serverData.ip + "," + serverData.port + "\n");
 
 			writer.close();
 		} catch (IOException io) {
@@ -62,13 +62,14 @@ public class FileManager {
 	public static Object[][] getServerObjectMatrix(List<ServerData> serverList) {
 		if (serverList == null)
 			return new Object[][] {};
-		Object[][] serverObjMatrix = new Object[serverList.size()][5];
+		Object[][] serverObjMatrix = new Object[serverList.size()][6];
 		for (int i = 0; i < serverList.size(); i++) {
 			serverObjMatrix[i][0] = serverList.get(i).nickName;
 			serverObjMatrix[i][1] = serverList.get(i).realName;
-			serverObjMatrix[i][2] = serverList.get(i).port;
-			serverObjMatrix[i][3] = serverList.get(i).isOpen ? "Hoạt động" : "Không hoạt động";
-			serverObjMatrix[i][4] = serverList.get(i).connectAccountCount;
+			serverObjMatrix[i][2] = serverList.get(i).ip;
+			serverObjMatrix[i][3] = serverList.get(i).port;
+			serverObjMatrix[i][4] = serverList.get(i).isOpen ? "Hoạt động" : "Không hoạt động";
+			serverObjMatrix[i][5] = serverList.get(i).connectAccountCount;
 		}
 		return serverObjMatrix;
 	}

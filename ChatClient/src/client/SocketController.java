@@ -128,10 +128,18 @@ public class SocketController {
 								Main.mainScreen.addNewMessage(roomID, "file", user, fileName);
 								break;
 							}
+							case "audio from user to room": {
+								String user = receiver.readLine();
+								int roomID = Integer.parseInt(receiver.readLine());
+								int audioDuration = Integer.parseInt(receiver.readLine());
+								System.out.println("Recevie audio from " + user + " to room " + roomID);
+								Main.mainScreen.addNewMessage(roomID, "audio", user, "" + audioDuration);
+								break;
+							}
 							case "response download file": {
 								int fileSize = Integer.parseInt(receiver.readLine());
 								File file = new File(downloadToPath);
-								byte[] buffer = new byte[512];
+								byte[] buffer = new byte[1024];
 								InputStream in = s.getInputStream();
 								OutputStream out = new FileOutputStream(file);
 
@@ -145,6 +153,27 @@ public class SocketController {
 								}
 
 								out.close();
+								break;
+							}
+							case "response audio bytes": {
+								int fileSize = Integer.parseInt(receiver.readLine());
+
+								byte[] buffer = new byte[1024];
+								InputStream in = s.getInputStream();
+								ByteArrayOutputStream receivedBytes = new ByteArrayOutputStream();
+
+								int count;
+								int receivedFileSize = 0;
+								while ((count = in.read(buffer)) > 0) {
+									receivedBytes.write(buffer, 0, count);
+									receivedFileSize += count;
+									if (receivedFileSize >= fileSize)
+										break;
+								}
+
+								receivedBytes.close();
+
+								AudioController.play(receivedBytes.toByteArray());
 								break;
 							}
 							default:
@@ -191,10 +220,13 @@ public class SocketController {
 			System.out.println("Send file " + fileName + " to room " + roomID);
 
 			File file = new File(filePath);
+			Room room = Room.findRoom(allRooms, roomID);
 
 			sender.write("file to room");
 			sender.newLine();
 			sender.write("" + roomID);
+			sender.newLine();
+			sender.write("" + room.messages.size());
 			sender.newLine();
 			sender.write(fileName);
 			sender.newLine();
@@ -202,7 +234,7 @@ public class SocketController {
 			sender.newLine();
 			sender.flush();
 
-			byte[] buffer = new byte[512];
+			byte[] buffer = new byte[1024];
 			InputStream in = new FileInputStream(file);
 			OutputStream out = s.getOutputStream();
 
@@ -218,12 +250,54 @@ public class SocketController {
 		}
 	}
 
+	public void sendAudioToRoom(int roomID, byte[] audioBytes) {
+
+		try {
+			System.out.println("Send audio to room " + roomID);
+
+			Room room = Room.findRoom(allRooms, roomID);
+
+			sender.write("audio to room");
+			sender.newLine();
+			sender.write("" + roomID);
+			sender.newLine();
+			sender.write("" + room.messages.size());
+			sender.newLine();
+			sender.write("" + AudioController.getAudioDuration(audioBytes));
+			sender.newLine();
+			sender.write("" + audioBytes.length);
+			sender.newLine();
+			sender.flush();
+
+			byte[] buffer = new byte[1024];
+			InputStream in = new ByteArrayInputStream(audioBytes);
+			OutputStream out = s.getOutputStream();
+
+			int count;
+			while ((count = in.read(buffer)) > 0) {
+				out.write(buffer, 0, count);
+			}
+
+			in.close();
+			out.flush();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
 	public String downloadToPath;
 
-	public void downloadFile(String fileName, String downloadToPath) {
+	public void downloadFile(int roomID, int fileMessageIndex, String fileName, String downloadToPath) {
+
 		this.downloadToPath = downloadToPath;
 		try {
 			sender.write("request download file");
+			sender.newLine();
+			sender.write("" + roomID);
+			sender.newLine();
+			sender.write("" + fileMessageIndex);
 			sender.newLine();
 			sender.write(fileName);
 			sender.newLine();
@@ -233,7 +307,23 @@ public class SocketController {
 		}
 	}
 
+	public void getAudioBytes(int roomID, int fileMessageIndex) {
+
+		try {
+			sender.write("request audio bytes");
+			sender.newLine();
+			sender.write("" + roomID);
+			sender.newLine();
+			sender.write("" + fileMessageIndex);
+			sender.newLine();
+			sender.flush();
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		}
+	}
+
 	public void createPrivateRoom(String otherUser) {
+
 		try {
 			sender.write("request create room");
 			sender.newLine();
@@ -254,6 +344,7 @@ public class SocketController {
 	}
 
 	public void createGroup(String groupName, List<String> otherUsers) {
+
 		try {
 			sender.write("request create room");
 			sender.newLine();
@@ -275,10 +366,10 @@ public class SocketController {
 		}
 	}
 
-	public static boolean serverOnline(int port) {
+	public static boolean serverOnline(String ip, int port) {
 		try {
 			Socket s = new Socket();
-			s.connect(new InetSocketAddress("localhost", port), 300);
+			s.connect(new InetSocketAddress(ip, port), 300);
 			s.close();
 			return true;
 		} catch (IOException ex) {
@@ -286,13 +377,13 @@ public class SocketController {
 		}
 	}
 
-	public static String serverName(int port) {
+	public static String serverName(String ip, int port) {
 
-		if (!serverOnline(port))
+		if (!serverOnline(ip, port))
 			return "";
 
 		try {
-			Socket s = new Socket("localhost", port);
+			Socket s = new Socket(ip, port);
 			InputStream is = s.getInputStream();
 			BufferedReader receiver = new BufferedReader(new InputStreamReader(is));
 			OutputStream os = s.getOutputStream();

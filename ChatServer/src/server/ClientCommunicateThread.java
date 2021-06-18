@@ -2,7 +2,6 @@ package server;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -171,6 +170,7 @@ public class ClientCommunicateThread extends Thread {
 
 				case "file to room": {
 					int roomID = Integer.parseInt(thisClient.receiver.readLine());
+					int roomMessagesCount = Integer.parseInt(thisClient.receiver.readLine());
 					String fileName = thisClient.receiver.readLine();
 					int fileSize = Integer.parseInt(thisClient.receiver.readLine());
 
@@ -190,8 +190,16 @@ public class ClientCommunicateThread extends Thread {
 						}
 					}
 
+					File filesFolder = new File("files");
+					if (!filesFolder.exists())
+						filesFolder.mkdir();
+
+					int dotIndex = fileName.lastIndexOf('.');
+					fileName = "files/" + fileName.substring(0, dotIndex)
+							+ String.format("%02d%03d", roomID, roomMessagesCount) + fileName.substring(dotIndex);
+
 					File file = new File(fileName);
-					byte[] buffer = new byte[512];
+					byte[] buffer = new byte[1024];
 					InputStream in = thisClient.socket.getInputStream();
 					OutputStream out = new FileOutputStream(file);
 
@@ -205,13 +213,65 @@ public class ClientCommunicateThread extends Thread {
 					}
 
 					out.close();
+					break;
+				}
+
+				case "audio to room": {
+					int roomID = Integer.parseInt(thisClient.receiver.readLine());
+					int roomMessagesCount = Integer.parseInt(thisClient.receiver.readLine());
+					int audioDuration = Integer.parseInt(thisClient.receiver.readLine());
+					int audioByteSize = Integer.parseInt(thisClient.receiver.readLine());
+
+					Room room = Room.findRoom(Main.socketController.allRooms, roomID);
+					for (String user : room.users) {
+						Client currentClient = Client.findClient(Main.socketController.connectedClient, user);
+						if (currentClient != null) {
+							currentClient.sender.write("audio from user to room");
+							currentClient.sender.newLine();
+							currentClient.sender.write(thisClient.userName);
+							currentClient.sender.newLine();
+							currentClient.sender.write("" + roomID);
+							currentClient.sender.newLine();
+							currentClient.sender.write("" + audioDuration);
+							currentClient.sender.newLine();
+							currentClient.sender.flush();
+						}
+					}
+
+					File filesFolder = new File("files");
+					if (!filesFolder.exists())
+						filesFolder.mkdir();
+
+					String audioFileName = "files/audio" + String.format("%02d%03d", roomID, roomMessagesCount);
+
+					File file = new File(audioFileName);
+					byte[] buffer = new byte[1024];
+					InputStream in = thisClient.socket.getInputStream();
+					OutputStream out = new FileOutputStream(file);
+
+					int receivedSize = 0;
+					int count;
+					while ((count = in.read(buffer)) > 0) {
+						out.write(buffer, 0, count);
+						receivedSize += count;
+						if (receivedSize >= audioByteSize)
+							break;
+					}
+
+					out.close();
 
 					break;
 				}
 
 				case "request download file": {
 					try {
+						int roomID = Integer.parseInt(thisClient.receiver.readLine());
+						int messageIndex = Integer.parseInt(thisClient.receiver.readLine());
 						String fileName = thisClient.receiver.readLine();
+
+						int dotIndex = fileName.lastIndexOf('.');
+						fileName = "files/" + fileName.substring(0, dotIndex)
+								+ String.format("%02d%03d", roomID, messageIndex) + fileName.substring(dotIndex);
 						File file = new File(fileName);
 
 						thisClient.sender.write("response download file");
@@ -220,7 +280,38 @@ public class ClientCommunicateThread extends Thread {
 						thisClient.sender.newLine();
 						thisClient.sender.flush();
 
-						byte[] buffer = new byte[512];
+						byte[] buffer = new byte[1024];
+						InputStream in = new FileInputStream(file);
+						OutputStream out = thisClient.socket.getOutputStream();
+
+						int count;
+						while ((count = in.read(buffer)) > 0) {
+							out.write(buffer, 0, count);
+						}
+
+						in.close();
+						out.flush();
+					} catch (IOException ex) {
+						ex.printStackTrace();
+					}
+					break;
+				}
+
+				case "request audio bytes": {
+					try {
+						int roomID = Integer.parseInt(thisClient.receiver.readLine());
+						int messageIndex = Integer.parseInt(thisClient.receiver.readLine());
+
+						String audioFileName = "files/audio" + String.format("%02d%03d", roomID, messageIndex);
+						File file = new File(audioFileName);
+
+						thisClient.sender.write("response audio bytes");
+						thisClient.sender.newLine();
+						thisClient.sender.write("" + file.length());
+						thisClient.sender.newLine();
+						thisClient.sender.flush();
+
+						byte[] buffer = new byte[1024];
 						InputStream in = new FileInputStream(file);
 						OutputStream out = thisClient.socket.getOutputStream();
 

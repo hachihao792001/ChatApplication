@@ -2,13 +2,9 @@ package client;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -37,13 +33,14 @@ public class MainScreen extends JFrame implements ActionListener {
 		GBCBuilder gbc = new GBCBuilder(1, 1);
 		JPanel mainContent = new JPanel(new GridBagLayout());
 
-		connectedServerInfoJList = new JList<String>(
-				new String[] { "Port server: " + Main.socketController.connectedServer.port,
-						"Số user online: " + Main.socketController.connectedServer.connectAccountCount });
+		connectedServerInfoJList = new JList<String>(new String[] { "IP: " + Main.socketController.connectedServer.ip,
+				"Port: " + Main.socketController.connectedServer.port,
+				"Số user online: " + Main.socketController.connectedServer.connectAccountCount });
 
 		connectedServerInfoJList.setBorder(BorderFactory
 				.createTitledBorder(String.format("Server %s (%s)", Main.connectServerScreen.connectedServer.nickName,
-						SocketController.serverName(Main.socketController.connectedServer.port))));
+						SocketController.serverName(Main.socketController.connectedServer.ip,
+								Main.socketController.connectedServer.port))));
 
 		onlineUserJList = new JList<String>();
 		onlineUserJList.addMouseListener(new MouseAdapter() {
@@ -130,7 +127,7 @@ public class MainScreen extends JFrame implements ActionListener {
 		JPanel chatPanel = new JPanel(new GridBagLayout());
 		enterMessagePanel = new JPanel(new GridBagLayout());
 		enterMessagePanel.setBackground(Color.white);
-		JButton sendButton, fileButton, emojiButton;
+		JButton sendButton, fileButton, emojiButton, audioButton;
 
 		sendButton = new JButton("Gửi");
 		sendButton.setActionCommand("send");
@@ -140,15 +137,11 @@ public class MainScreen extends JFrame implements ActionListener {
 		emojiButton.setActionCommand("emoji");
 		emojiButton.addActionListener(this);
 
-		Image scaledImage = null;
-		try {
-			BufferedImage img = ImageIO.read(new File("fileIcon.png"));
-			scaledImage = img.getScaledInstance(16, 16, Image.SCALE_SMOOTH);
-		} catch (IOException e1) {
-		}
-		fileButton = new JButton(new ImageIcon(scaledImage));
+		fileButton = new JButton(Main.getScaledImage("/fileIcon.png", 16, 16));
 		fileButton.setActionCommand("file");
 		fileButton.addActionListener(this);
+
+		audioButton = new AudioButton();
 
 		messageArea = new JTextArea();
 		messageArea.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1, true));
@@ -170,6 +163,7 @@ public class MainScreen extends JFrame implements ActionListener {
 				gbc.setGrid(2, 1).setWeight(0, 0).setFill(GridBagConstraints.NONE).setAnchor(GridBagConstraints.NORTH));
 		enterMessagePanel.add(emojiButton, gbc.setGrid(3, 1));
 		enterMessagePanel.add(fileButton, gbc.setGrid(4, 1));
+		enterMessagePanel.add(audioButton, gbc.setGrid(5, 1));
 
 		roomTabbedPane = new JTabbedPane();
 		roomTabbedPane.addChangeListener(new ChangeListener() {
@@ -215,9 +209,9 @@ public class MainScreen extends JFrame implements ActionListener {
 	public void updateServerData() {
 		Main.socketController.connectedServer.connectAccountCount = Main.socketController.onlineUsers.size();
 
-		connectedServerInfoJList
-				.setListData(new String[] { "Port server: " + Main.socketController.connectedServer.port,
-						"Số user online: " + Main.socketController.connectedServer.connectAccountCount });
+		connectedServerInfoJList.setListData(new String[] { "IP: " + Main.socketController.connectedServer.ip,
+				"Port: " + Main.socketController.connectedServer.port,
+				"Số user online: " + Main.socketController.connectedServer.connectAccountCount });
 	}
 
 	public void newRoomTab(Room room) {
@@ -401,6 +395,8 @@ public class MainScreen extends JFrame implements ActionListener {
 		}
 
 		case "file": {
+			if (chattingRoom == -1)
+				break;
 			JFileChooser jfc = new JFileChooser();
 			jfc.setDialogTitle("Chọn file để gửi");
 			int result = jfc.showDialog(null, "Chọn file");
@@ -413,6 +409,46 @@ public class MainScreen extends JFrame implements ActionListener {
 				Main.socketController.sendFileToRoom(chattingRoom, fileName, filePath);
 			}
 		}
+		}
+	}
+
+	public static class AudioButton extends JButton implements ActionListener {
+		private static final long serialVersionUID = 1L;
+
+		public boolean isRecording;
+		ImageIcon microphoneImage;
+		ImageIcon stopImage;
+
+		public AudioButton() {
+			microphoneImage = Main.getScaledImage("/microphone.png", 16, 16);
+			stopImage = Main.getScaledImage("/stop.png", 16, 16);
+
+			this.setIcon(microphoneImage);
+			this.addActionListener(this);
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			if (chattingRoom == -1)
+				return;
+
+			isRecording = !isRecording;
+			if (isRecording) {
+				this.setIcon(stopImage);
+				AudioController.startRecord();
+
+			} else {
+				this.setIcon(microphoneImage);
+				byte[] audioBytes = AudioController.stopRecord();
+
+				String[] options = { "Gửi", "Huỷ" };
+				int choice = JOptionPane.showOptionDialog(Main.mainScreen, "Bạn muốn gửi đoạn âm thanh vừa ghi không?",
+						"Câu hỏi", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+
+				if (choice == 0) {
+					Main.socketController.sendAudioToRoom(chattingRoom, audioBytes);
+				}
+			}
 		}
 	}
 

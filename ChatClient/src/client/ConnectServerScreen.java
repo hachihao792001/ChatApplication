@@ -1,24 +1,13 @@
 package client;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.*;
+import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellRenderer;
 
 public class ConnectServerScreen extends JFrame implements ActionListener {
 
@@ -44,7 +33,7 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
 					boolean hasFocus, int row, int column) {
 				Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-				if (column == 3) {
+				if (column == 4) {
 					c.setForeground(value.toString().equals("Hoạt động") ? Color.green : Color.red);
 					c.setFont(new Font("Dialog", Font.BOLD, 13));
 				} else
@@ -113,7 +102,7 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 		case "join": {
 			if (serverTable.getSelectedRow() == -1)
 				break;
-			String serverState = serverTable.getValueAt(serverTable.getSelectedRow(), 3).toString();
+			String serverState = serverTable.getValueAt(serverTable.getSelectedRow(), 4).toString();
 			if (serverState.equals("Không hoạt động")) {
 				JOptionPane.showMessageDialog(this, "Server không hoạt động", "Thông báo",
 						JOptionPane.INFORMATION_MESSAGE);
@@ -132,10 +121,11 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 						JOptionPane.showMessageDialog(askNameDialog, "Tên không được trống", "Thông báo",
 								JOptionPane.INFORMATION_MESSAGE);
 					else {
+						String selectedIP = serverTable.getValueAt(serverTable.getSelectedRow(), 2).toString();
 						int selectedPort = Integer
-								.parseInt(serverTable.getValueAt(serverTable.getSelectedRow(), 2).toString());
-						ServerData selectedServer = serverList.stream().filter(x -> x.port == selectedPort).findAny()
-								.orElse(null);
+								.parseInt(serverTable.getValueAt(serverTable.getSelectedRow(), 3).toString());
+						ServerData selectedServer = serverList.stream()
+								.filter(x -> x.ip.equals(selectedIP) && x.port == selectedPort).findAny().orElse(null);
 
 						Main.socketController = new SocketController(nameText.getText(), selectedServer);
 						Main.socketController.Login();
@@ -161,8 +151,14 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			break;
 		}
 		case "add": {
-			JDialog askPortDialog = new JDialog();
+			JDialog addServerDialog = new JDialog();
 
+			JLabel nickNameLabel = new JLabel("Biệt danh server");
+			JLabel ipLabel = new JLabel("IP");
+			JLabel portLabel = new JLabel("Port");
+			JTextField nickNameText = new JTextField();
+			nickNameText.setPreferredSize(new Dimension(150, 20));
+			JTextField ipText = new JTextField();
 			JTextField portText = new JTextField();
 			JButton addServerButton = new JButton("Thêm");
 			addServerButton.addActionListener(new ActionListener() {
@@ -170,37 +166,45 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 				public void actionPerformed(ActionEvent e) {
 					try {
 						int port = Integer.parseInt(portText.getText());
-						String serverName = SocketController.serverName(port);
+						String nickName = nickNameText.getText();
+						String ip = ipText.getText();
+						String serverName = SocketController.serverName(ip, port);
 
 						if (serverList == null)
 							serverList = new ArrayList<ServerData>();
-						serverList.add(new ServerData(serverName, port));
+						serverList.add(new ServerData(nickName, serverName, ip, port, false, 0));
 
 						FileManager.setServerList(serverList);
 						updateServerTable();
 
-						askPortDialog.setVisible(false);
-						askPortDialog.dispose();
+						addServerDialog.setVisible(false);
+						addServerDialog.dispose();
 					} catch (NumberFormatException ex) {
-						JOptionPane.showMessageDialog(askPortDialog, "Port phải là 1 số nguyên dương", "Thông báo",
+						JOptionPane.showMessageDialog(addServerDialog, "Port phải là 1 số nguyên dương", "Thông báo",
 								JOptionPane.INFORMATION_MESSAGE);
 					}
 				}
 			});
 
-			GBCBuilder gbc = new GBCBuilder(1, 1).setFill(GridBagConstraints.BOTH).setWeight(1, 0);
-			JPanel askPortContent = new JPanel(new GridBagLayout());
-			askPortContent.setPreferredSize(new Dimension(200, 50));
-			askPortContent.add(portText, gbc);
-			askPortContent.add(addServerButton, gbc.setGrid(2, 1).setWeight(0, 0).setFill(GridBagConstraints.NONE));
+			GBCBuilder gbc = new GBCBuilder(1, 1).setFill(GridBagConstraints.BOTH).setWeight(1, 0).setInsets(5);
+			JPanel addServerContent = new JPanel(new GridBagLayout());
+			// askPortContent.setPreferredSize(new Dimension(200, 50));
+			addServerContent.add(nickNameLabel, gbc.setWeight(0, 0));
+			addServerContent.add(nickNameText, gbc.setGrid(2, 1).setWeight(1, 0));
+			addServerContent.add(ipLabel, gbc.setGrid(1, 2).setWeight(0, 0));
+			addServerContent.add(ipText, gbc.setGrid(2, 2).setWeight(1, 0));
+			addServerContent.add(portLabel, gbc.setGrid(1, 3).setWeight(0, 0));
+			addServerContent.add(portText, gbc.setGrid(2, 3).setWeight(1, 0));
+			addServerContent.add(addServerButton,
+					gbc.setGrid(1, 4).setSpan(2, 1).setWeight(0, 0).setFill(GridBagConstraints.NONE));
 
-			askPortDialog.setContentPane(askPortContent);
-			askPortDialog.setTitle("Nhập port của server");
-			askPortDialog.getRootPane().setDefaultButton(addServerButton);
-			askPortDialog.setModalityType(JDialog.DEFAULT_MODALITY_TYPE);
-			askPortDialog.pack();
-			askPortDialog.setLocationRelativeTo(null);
-			askPortDialog.setVisible(true);
+			addServerDialog.setContentPane(addServerContent);
+			addServerDialog.setTitle("Nhập port của server");
+			addServerDialog.getRootPane().setDefaultButton(addServerButton);
+			addServerDialog.setModalityType(JDialog.DEFAULT_MODALITY_TYPE);
+			addServerDialog.pack();
+			addServerDialog.setLocationRelativeTo(null);
+			addServerDialog.setVisible(true);
 
 			break;
 		}
@@ -208,9 +212,10 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			if (serverTable.getSelectedRow() == -1)
 				break;
 
-			int selectedPort = Integer.parseInt(serverTable.getValueAt(serverTable.getSelectedRow(), 2).toString());
+			String selectedIP = serverTable.getValueAt(serverTable.getSelectedRow(), 2).toString();
+			int selectedPort = Integer.parseInt(serverTable.getValueAt(serverTable.getSelectedRow(), 3).toString());
 			for (int i = 0; i < serverList.size(); i++) {
-				if (serverList.get(i).port == selectedPort) {
+				if (serverList.get(i).ip.equals(selectedIP) && serverList.get(i).port == selectedPort) {
 					serverList.remove(i);
 					break;
 				}
@@ -223,15 +228,19 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			if (serverTable.getSelectedRow() == -1)
 				break;
 
-			int selectedPort = Integer.parseInt(serverTable.getValueAt(serverTable.getSelectedRow(), 2).toString());
-			ServerData edittingServer = serverList.stream().filter(x -> x.port == selectedPort).findAny().orElse(null);
+			String selectedIP = serverTable.getValueAt(serverTable.getSelectedRow(), 2).toString();
+			int selectedPort = Integer.parseInt(serverTable.getValueAt(serverTable.getSelectedRow(), 3).toString());
+			ServerData edittingServer = serverList.stream()
+					.filter(x -> x.ip.equals(selectedIP) && x.port == selectedPort).findAny().orElse(null);
 
 			JDialog editDialog = new JDialog();
 
-			JLabel serverNameLabel = new JLabel("Biệt danh server: ");
-			JTextField serverNameText = new JTextField(edittingServer.nickName);
-			serverNameText.setPreferredSize(new Dimension(150, 20));
-			JLabel portLabel = new JLabel("Port: ");
+			JLabel serverNameLabel = new JLabel("Biệt danh server");
+			JTextField nickNameText = new JTextField(edittingServer.nickName);
+			nickNameText.setPreferredSize(new Dimension(150, 20));
+			JLabel ipLabel = new JLabel("IP");
+			JTextField ipText = new JTextField(edittingServer.ip);
+			JLabel portLabel = new JLabel("Port");
 			JTextField portText = new JTextField("" + edittingServer.port);
 			portText.setPreferredSize(new Dimension(150, 20));
 			JButton editButton = new JButton("Sửa");
@@ -239,7 +248,7 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					try {
-						String newServerName = serverNameText.getText();
+						String newServerName = nickNameText.getText();
 						int newPort = Integer.parseInt(portText.getText());
 
 						edittingServer.nickName = newServerName;
@@ -262,13 +271,16 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			JPanel editContent = new JPanel(new GridBagLayout());
 			GBCBuilder gbc = new GBCBuilder(1, 1).setFill(GridBagConstraints.BOTH).setWeight(1, 0).setInsets(5);
 			editContent.add(serverNameLabel, gbc);
-			editContent.add(serverNameText, gbc.setGrid(2, 1));
+			editContent.add(nickNameText, gbc.setGrid(2, 1));
 			editContent.add(portLabel, gbc.setGrid(1, 2));
 			editContent.add(portText, gbc.setGrid(2, 2));
-			editContent.add(editButton, gbc.setGrid(1, 3).setSpan(2, 1));
+			editContent.add(ipLabel, gbc.setGrid(1, 3));
+			editContent.add(ipText, gbc.setGrid(2, 3));
+			editContent.add(editButton, gbc.setGrid(1, 4).setSpan(2, 1));
 
 			editDialog.setTitle("Chỉnh sửa thông tin server");
 			editDialog.setContentPane(editContent);
+			editDialog.getRootPane().setDefaultButton(editButton);
 			editDialog.setModalityType(JDialog.DEFAULT_MODALITY_TYPE);
 			editDialog.setLocationRelativeTo(null);
 			editDialog.pack();
@@ -285,9 +297,10 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 
 	public void loginResultAction(String result) {
 		if (result.equals("success")) {
-
-			int selectedPort = Integer.parseInt(serverTable.getValueAt(serverTable.getSelectedRow(), 2).toString());
-			connectedServer = serverList.stream().filter(x -> x.port == selectedPort).findAny().orElse(null);
+			String selectedIP = serverTable.getValueAt(serverTable.getSelectedRow(), 2).toString();
+			int selectedPort = Integer.parseInt(serverTable.getValueAt(serverTable.getSelectedRow(), 3).toString());
+			connectedServer = serverList.stream().filter(x -> x.ip.equals(selectedIP) && x.port == selectedPort)
+					.findAny().orElse(null);
 
 			this.setVisible(false);
 			this.dispose();
@@ -301,16 +314,18 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 	}
 
 	public void updateServerTable() {
+		if (serverList == null)
+			return;
 		for (ServerData serverData : serverList) {
-			serverData.isOpen = SocketController.serverOnline(serverData.port);
+			serverData.isOpen = SocketController.serverOnline(serverData.ip, serverData.port);
 			if (serverData.isOpen) {
-				serverData.realName = SocketController.serverName(serverData.port);
+				serverData.realName = SocketController.serverName(serverData.ip, serverData.port);
 				serverData.connectAccountCount = SocketController.serverConnectedAccountCount(serverData.port);
 			}
 		}
 
-		serverTable.setModel(new DefaultTableModel(FileManager.getServerObjectMatrix(serverList),
-				new String[] { "Biệt danh server", "Tên gốc server", "Port server", "Trạng thái", "Số user online" }) {
+		serverTable.setModel(new DefaultTableModel(FileManager.getServerObjectMatrix(serverList), new String[] {
+				"Biệt danh server", "Tên gốc server", "IP server", "Port server", "Trạng thái", "Số user online" }) {
 			private static final long serialVersionUID = 1L;
 
 			@Override
