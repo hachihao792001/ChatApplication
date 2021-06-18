@@ -42,6 +42,8 @@ public class SocketController {
 
 	public void CloseSocket() {
 		try {
+			for (Client client : connectedClient)
+				client.socket.close();
 			s.close();
 		} catch (IOException e) {
 			e.printStackTrace();

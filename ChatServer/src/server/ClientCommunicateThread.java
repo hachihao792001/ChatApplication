@@ -2,6 +2,7 @@ package server;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -100,6 +101,7 @@ public class ClientCommunicateThread extends Thread {
 
 				case "request create room": {
 					String roomName = thisClient.receiver.readLine();
+					String roomType = thisClient.receiver.readLine();
 					int userCount = Integer.parseInt(thisClient.receiver.readLine());
 					List<String> users = new ArrayList<String>();
 					for (int i = 0; i < userCount; i++)
@@ -117,7 +119,7 @@ public class ClientCommunicateThread extends Thread {
 						currentClientSender.newLine();
 						currentClientSender.write(thisClient.userName);
 						currentClientSender.newLine();
-						if (users.size() == 2) {
+						if (roomType.equals("private")) {
 							// private chat thì tên room của mỗi người sẽ là tên của người kia
 							currentClientSender.write(users.get(1 - i)); // user 0 thì gửi 1, user 1 thì gửi 0
 							currentClientSender.newLine();
@@ -125,6 +127,8 @@ public class ClientCommunicateThread extends Thread {
 							currentClientSender.write(roomName);
 							currentClientSender.newLine();
 						}
+						currentClientSender.write(roomType);
+						currentClientSender.newLine();
 						currentClientSender.write("" + users.size());
 						currentClientSender.newLine();
 						for (String userr : users) {
@@ -236,7 +240,7 @@ public class ClientCommunicateThread extends Thread {
 			}
 
 		} catch (IOException e) {
-			if (thisClient.userName != null) {
+			if (!Main.socketController.s.isClosed() && thisClient.userName != null) {
 
 				try {
 					for (Client client : Main.socketController.connectedClient) {
@@ -248,6 +252,9 @@ public class ClientCommunicateThread extends Thread {
 							client.sender.flush();
 						}
 					}
+
+					for (Room room : Main.socketController.allRooms)
+						room.users.remove(thisClient.userName);
 
 					thisClient.socket.close();
 

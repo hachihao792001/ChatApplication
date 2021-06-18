@@ -1,15 +1,24 @@
 package client;
 
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 
 public class ConnectServerScreen extends JFrame implements ActionListener {
 
@@ -28,6 +37,22 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 
 		serverTable = new JTable();
 		serverTable.setRowHeight(25);
+		serverTable.setDefaultRenderer(String.class, new DefaultTableCellRenderer() {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+					boolean hasFocus, int row, int column) {
+				Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+				if (column == 3) {
+					c.setForeground(value.toString().equals("Hoạt động") ? Color.green : Color.red);
+					c.setFont(new Font("Dialog", Font.BOLD, 13));
+				} else
+					c.setForeground(Color.black);
+
+				return c;
+			}
+		});
 		serverList = FileManager.getServerList();
 
 		updateServerTable();
@@ -38,6 +63,14 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 		JButton joinButton = new JButton("Tham gia server");
 		joinButton.addActionListener(this);
 		joinButton.setActionCommand("join");
+		serverTable.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2) {
+					joinButton.doClick();
+				}
+			}
+		});
 
 		JButton addButton = new JButton("Thêm");
 		addButton.addActionListener(this);
@@ -51,12 +84,18 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 		editButton.addActionListener(this);
 		editButton.setActionCommand("edit");
 
-		connectServerContent.add(refreshButton, gbc.setSpan(3, 1).setFill(GridBagConstraints.BOTH).setWeight(1, 0));
-		connectServerContent.add(serverScrollPane, gbc.setSpan(3, 1).setGrid(1, 2).setWeight(1, 1));
-		connectServerContent.add(joinButton, gbc.setGrid(1, 3).setWeight(1, 0));
-		connectServerContent.add(addButton, gbc.setSpan(1, 1).setGrid(1, 4));
-		connectServerContent.add(deleteButton, gbc.setGrid(2, 4));
-		connectServerContent.add(editButton, gbc.setGrid(3, 4));
+		connectServerContent.add(serverScrollPane,
+				gbc.setSpan(3, 1).setGrid(1, 1).setWeight(1, 1).setFill(GridBagConstraints.BOTH).setInsets(5));
+		JPanel joinRefreshPanel = new JPanel(new FlowLayout());
+
+		joinRefreshPanel.add(joinButton);
+		joinRefreshPanel.add(refreshButton);
+		connectServerContent.add(joinRefreshPanel,
+				gbc.setGrid(1, 2).setSpan(3, 1).setWeight(1, 0).setFill(GridBagConstraints.NONE));
+
+		connectServerContent.add(addButton, gbc.setSpan(1, 1).setGrid(1, 3).setFill(GridBagConstraints.BOTH));
+		connectServerContent.add(deleteButton, gbc.setGrid(2, 3));
+		connectServerContent.add(editButton, gbc.setGrid(3, 3));
 
 		this.setTitle("Ứng dụng chat");
 		this.setContentPane(connectServerContent);
@@ -277,6 +316,11 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			@Override
 			public boolean isCellEditable(int arg0, int arg1) {
 				return false;
+			}
+
+			@Override
+			public Class<?> getColumnClass(int columnIndex) {
+				return String.class;
 			}
 
 		});

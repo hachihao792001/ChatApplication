@@ -24,9 +24,11 @@ public class MainScreen extends JFrame implements ActionListener {
 	JList<String> connectedServerInfoJList;
 
 	JList<String> onlineUserJList;
+	JList<String> groupJList;
 
 	JTabbedPane roomTabbedPane;
 	List<RoomMessagesPanel> roomMessagesPanels;
+	JList<String> roomUsersJList;
 
 	JPanel enterMessagePanel;
 	JTextArea messageArea;
@@ -67,6 +69,7 @@ public class MainScreen extends JFrame implements ActionListener {
 
 						if (roomTabIndex == -1) { // room tồn tại nhưng tab bị chéo trước đó
 							newRoomTab(foundRoom);
+							roomTabbedPane.setSelectedIndex(roomTabbedPane.getTabCount() - 1);
 						} else {
 							roomTabbedPane.setSelectedIndex(roomTabIndex);
 						}
@@ -74,13 +77,55 @@ public class MainScreen extends JFrame implements ActionListener {
 				}
 			}
 		});
+		JScrollPane onlineUserScrollPane = new JScrollPane(onlineUserJList);
+		onlineUserScrollPane.setBorder(BorderFactory.createTitledBorder("Danh sách user đang online"));
 
-		JScrollPane roomListScrollPane = new JScrollPane(onlineUserJList);
-		roomListScrollPane.setBorder(BorderFactory.createTitledBorder("Danh sách user đang online"));
+		groupJList = new JList<String>();
+		groupJList.addMouseListener(new MouseAdapter() {
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2) {
+
+					String clickedGroup = groupJList.getSelectedValue();
+					System.out.println("Double click " + clickedGroup);
+					Room foundRoom = Room.findGroup(Main.socketController.allRooms, clickedGroup);
+
+					int roomTabIndex = -1;
+					for (int i = 0; i < roomTabbedPane.getTabCount(); i++) {
+						JScrollPane currentScrollPane = (JScrollPane) roomTabbedPane.getComponentAt(i);
+						RoomMessagesPanel currentRoomMessagePanel = (RoomMessagesPanel) currentScrollPane.getViewport()
+								.getView();
+						if (currentRoomMessagePanel.room.id == foundRoom.id) {
+							roomTabIndex = i;
+							break;
+						}
+					}
+
+					if (roomTabIndex == -1) { // room tồn tại nhưng tab bị chéo trước đó
+						newRoomTab(foundRoom);
+						roomTabbedPane.setSelectedIndex(roomTabbedPane.getTabCount() - 1);
+					} else {
+						roomTabbedPane.setSelectedIndex(roomTabIndex);
+					}
+				}
+			}
+		});
+		JScrollPane groupListScrollPane = new JScrollPane(groupJList);
+		groupListScrollPane.setBorder(BorderFactory.createTitledBorder("Danh sách group"));
+
+		JButton createGroupButton = new JButton("Tạo group");
+		createGroupButton.setActionCommand("group");
+		createGroupButton.addActionListener(this);
+
+		JPanel groupPanel = new JPanel(new GridBagLayout());
+		groupPanel.add(groupListScrollPane, gbc.setGrid(1, 1).setFill(GridBagConstraints.BOTH).setWeight(1, 1));
+		groupPanel.add(createGroupButton, gbc.setGrid(1, 2).setWeight(1, 0));
+
+		JSplitPane chatSubjectSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, onlineUserScrollPane, groupPanel);
+		chatSubjectSplitPane.setDividerLocation(230);
 
 		JPanel leftPanel = new JPanel(new GridBagLayout());
 		leftPanel.add(connectedServerInfoJList, gbc.setGrid(1, 1).setWeight(1, 0).setFill(GridBagConstraints.BOTH));
-		leftPanel.add(roomListScrollPane, gbc.setGrid(1, 2).setWeight(1, 1));
+		leftPanel.add(chatSubjectSplitPane, gbc.setGrid(1, 2).setWeight(1, 1));
 
 		JPanel chatPanel = new JPanel(new GridBagLayout());
 		enterMessagePanel = new JPanel(new GridBagLayout());
@@ -107,6 +152,7 @@ public class MainScreen extends JFrame implements ActionListener {
 
 		messageArea = new JTextArea();
 		messageArea.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1, true));
+		messageArea.setMinimumSize(new Dimension(100, 20));
 		InputMap input = messageArea.getInputMap();
 		input.put(KeyStroke.getKeyStroke("shift ENTER"), "insert-break");
 		input.put(KeyStroke.getKeyStroke("ENTER"), "text-submit");
@@ -134,24 +180,30 @@ public class MainScreen extends JFrame implements ActionListener {
 				if (selectedTab != null) {
 					RoomMessagesPanel selectedMessagePanel = (RoomMessagesPanel) selectedTab.getViewport().getView();
 					chattingRoom = selectedMessagePanel.room.id;
+					updateRoomUsersJList();
 				}
 			}
 		});
 		roomMessagesPanels = new ArrayList<RoomMessagesPanel>();
+		roomUsersJList = new JList<String>();
+		roomUsersJList.setBorder(BorderFactory.createTitledBorder("User trong room hiện tại"));
 
 		chatPanel.setBackground(Color.white);
 		chatPanel.add(roomTabbedPane, gbc.setGrid(1, 1).setFill(GridBagConstraints.BOTH).setWeight(1, 1));
 		chatPanel.add(enterMessagePanel, gbc.setGrid(1, 2).setWeight(1, 0));
 
-		JSplitPane mainSplitpane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, chatPanel);
+		JSplitPane roomSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, chatPanel, roomUsersJList);
+		roomSplitPane.setDividerLocation(420);
+		JSplitPane mainSplitpane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, roomSplitPane);
 		mainContent.add(mainSplitpane, gbc.setGrid(1, 1).setWeight(1, 1));
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
 			public void run() {
-				mainSplitpane.setDividerLocation(mainSplitpane.getSize().width / 3);
+				mainSplitpane.setDividerLocation(180);
 			}
 		});
 
+		this.setPreferredSize(new Dimension(800, 500));
 		this.setTitle("Ứng dụng chat đăng nhập với tên " + Main.socketController.userName);
 		this.setContentPane(mainContent);
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -169,11 +221,9 @@ public class MainScreen extends JFrame implements ActionListener {
 	}
 
 	public void newRoomTab(Room room) {
-		RoomMessagesPanel roomMessagesPanel = new RoomMessagesPanel();
-		roomMessagesPanel.setLayout(new BoxLayout(roomMessagesPanel, BoxLayout.Y_AXIS));
-		roomMessagesPanel.setBackground(Color.white);
-		roomMessagesPanel.room = room;
+		RoomMessagesPanel roomMessagesPanel = new RoomMessagesPanel(room);
 		roomMessagesPanels.add(roomMessagesPanel);
+
 		for (MessageData messageData : room.messages)
 			addNewMessageGUI(room.id, messageData);
 
@@ -194,6 +244,22 @@ public class MainScreen extends JFrame implements ActionListener {
 
 	public void updateOnlineUserJList() {
 		onlineUserJList.setListData(Main.socketController.onlineUsers.toArray(new String[0]));
+	}
+
+	public void updateRoomUsersJList() {
+		System.out.println("updateRoomUsersJList");
+		Room theChattingRoom = Room.findRoom(Main.socketController.allRooms, chattingRoom);
+		if (theChattingRoom != null)
+			roomUsersJList.setListData(theChattingRoom.users.toArray(new String[0]));
+	}
+
+	public void updateGroupJList() {
+		List<String> groupList = new ArrayList<String>();
+		for (Room room : Main.socketController.allRooms) {
+			if (room.type.equals("group"))
+				groupList.add(room.name);
+		}
+		groupJList.setListData(groupList.toArray(new String[0]));
 	}
 
 	// ************** ROOM MESSAGES ***************
@@ -223,6 +289,58 @@ public class MainScreen extends JFrame implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		switch (e.getActionCommand()) {
+		case "group": {
+			JDialog chooseUserDialog = new JDialog();
+			JPanel chooseUserContent = new JPanel(new GridBagLayout());
+			GBCBuilder gbc = new GBCBuilder(1, 1);
+
+			JList<String> onlineUserJList = new JList<String>(Main.socketController.onlineUsers.toArray(new String[0]));
+			JScrollPane onlineUserScrollPanel = new JScrollPane(onlineUserJList);
+			onlineUserScrollPanel.setBorder(BorderFactory.createTitledBorder("Chọn user để thêm vào nhóm"));
+
+			JLabel groupNameLabel = new JLabel("Tên group: ");
+			JTextField groupNameField = new JTextField();
+			JButton createButton = new JButton("Tạo group");
+			createButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					String groupName = groupNameField.getText();
+					if (groupName.isEmpty()) {
+						JOptionPane.showMessageDialog(chooseUserDialog, "Tên group không được trống", "Lỗi tạo group",
+								JOptionPane.WARNING_MESSAGE);
+						return;
+					}
+					List<String> chosenUsers = onlineUserJList.getSelectedValuesList();
+					if (chosenUsers.size() < 2) {
+						JOptionPane.showMessageDialog(chooseUserDialog,
+								"Group phải có từ 3 người trở lên (chọn 2 người trở lên)", "Lỗi tạo group",
+								JOptionPane.WARNING_MESSAGE);
+						return;
+					}
+					Main.socketController.createGroup(groupName, chosenUsers);
+					chooseUserDialog.setVisible(false);
+					chooseUserDialog.dispose();
+				}
+			});
+
+			chooseUserContent.add(onlineUserScrollPanel,
+					gbc.setSpan(2, 1).setFill(GridBagConstraints.BOTH).setWeight(1, 0));
+			chooseUserContent.add(groupNameLabel, gbc.setGrid(1, 2).setSpan(1, 1).setWeight(0, 0));
+			chooseUserContent.add(groupNameField, gbc.setGrid(2, 2).setWeight(1, 0));
+			chooseUserContent.add(createButton,
+					gbc.setGrid(1, 3).setSpan(2, 1).setWeight(0, 0).setFill(GridBagConstraints.NONE));
+
+			chooseUserDialog.setMinimumSize(new Dimension(300, 150));
+			chooseUserDialog.setContentPane(chooseUserContent);
+			chooseUserDialog.setTitle("Tạo group mới");
+			chooseUserDialog.setModalityType(JDialog.DEFAULT_MODALITY_TYPE);
+			chooseUserDialog.pack();
+			chooseUserDialog.getRootPane().setDefaultButton(createButton);
+			chooseUserDialog.setLocationRelativeTo(null);
+			chooseUserDialog.setVisible(true);
+			break;
+		}
+
 		case "send": {
 			String content = messageArea.getText();
 			if (content.isEmpty())
@@ -274,11 +392,10 @@ public class MainScreen extends JFrame implements ActionListener {
 			});
 
 			emojiDialog.setContentPane(emojiTable);
-
 			emojiDialog.setTitle("Chọn emoji");
 			emojiDialog.setModalityType(JDialog.DEFAULT_MODALITY_TYPE);
 			emojiDialog.pack();
-			emojiDialog.setLocationRelativeTo(null);
+			emojiDialog.setLocationRelativeTo(this);
 			emojiDialog.setVisible(true);
 			break;
 		}
@@ -302,6 +419,12 @@ public class MainScreen extends JFrame implements ActionListener {
 	public static class RoomMessagesPanel extends JPanel {
 		private static final long serialVersionUID = 1L;
 		public Room room;
+
+		public RoomMessagesPanel(Room room) {
+			this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+			this.setBackground(Color.white);
+			this.room = room;
+		}
 
 		public static RoomMessagesPanel findRoomMessagesPanel(List<RoomMessagesPanel> roomMessagesPanelList, int id) {
 			for (RoomMessagesPanel roomMessagesPanel : roomMessagesPanelList) {

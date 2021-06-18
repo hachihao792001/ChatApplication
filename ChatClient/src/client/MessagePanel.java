@@ -28,7 +28,17 @@ public class MessagePanel extends JPanel {
 		contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.X_AXIS));
 		contentPanel.setBackground(Color.white);
 
-		if (data.type.equals("text")) {
+		if (data.type.equals("notify")) {
+
+			JTextArea textContent = new JTextArea(data.content);
+			textContent.setFont(new Font("Dialog", Font.ITALIC, 15));
+			textContent.setForeground(Color.red);
+			textContent.setEditable(false);
+
+			contentPanel.add(textContent);
+			this.setMaximumSize(new Dimension(thisMaxSize.width, 25));
+
+		} else if (data.type.equals("text")) {
 
 			JTextArea textContent = new JTextArea(data.content);
 			textContent.setFont(new Font("Dialog", Font.PLAIN, 15));

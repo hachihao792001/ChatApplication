@@ -6,18 +6,16 @@ import java.util.List;
 public class Room {
 	public int id;
 	public String name;
+	public String type;
 	public List<String> users;
 	public List<MessageData> messages;
 
-	public Room(int id, String name, List<String> users) {
+	public Room(int id, String name, String type, List<String> users) {
 		this.id = id;
 		this.name = name;
+		this.type = type;
 		this.users = users;
 		this.messages = new ArrayList<MessageData>();
-	}
-
-	public String getType() {
-		return users.size() > 2 ? "group" : "private";
 	}
 
 	public static Room findRoom(List<Room> roomList, int id) {
@@ -29,7 +27,15 @@ public class Room {
 
 	public static Room findPrivateRoom(List<Room> roomList, String otherUser) {
 		for (Room room : roomList) {
-			if (room.users.size() == 2 && (room.users.get(0).equals(otherUser) || room.users.get(1).equals(otherUser)))
+			if (room.type.equals("private") && room.name.equals(otherUser))
+				return room;
+		}
+		return null;
+	}
+
+	public static Room findGroup(List<Room> roomList, String groupName) {
+		for (Room room : roomList) {
+			if (room.type.equals("group") && room.name.equals(groupName))
 				return room;
 		}
 		return null;

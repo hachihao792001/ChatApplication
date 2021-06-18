@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JOptionPane;
+
 public class SocketController {
 
 	String userName;
@@ -61,6 +63,8 @@ public class SocketController {
 						while (true) {
 							String header = receiver.readLine();
 							System.out.println("Header " + header);
+							if (header == null)
+								throw new IOException();
 
 							switch (header) {
 							case "new user online": {
@@ -75,20 +79,32 @@ public class SocketController {
 								onlineUsers.remove(whoQuit);
 								Main.mainScreen.updateServerData();
 								Main.mainScreen.updateOnlineUserJList();
+								for (Room room : allRooms) {
+									if (room.users.contains(whoQuit)) {
+										Main.mainScreen.addNewMessage(room.id, "notify", whoQuit, "Đã thoát ứng dụng");
+										room.users.remove(whoQuit);
+									}
+								}
+								Main.mainScreen.updateRoomUsersJList();
+
 								break;
 							}
 							case "new room": {
 								int roomID = Integer.parseInt(receiver.readLine());
 								String whoCreate = receiver.readLine();
 								String name = receiver.readLine();
+								String type = receiver.readLine();
 								int roomUserCount = Integer.parseInt(receiver.readLine());
 								List<String> users = new ArrayList<String>();
 								for (int i = 0; i < roomUserCount; i++)
 									users.add(receiver.readLine());
 
-								Room newRoom = new Room(roomID, name, users);
+								Room newRoom = new Room(roomID, name, type, users);
 								Main.socketController.allRooms.add(newRoom);
 								Main.mainScreen.newRoomTab(newRoom);
+								Main.mainScreen.addNewMessage(newRoom.id, "notify", whoCreate,
+										type.equals("group") ? "Đã tạo group" : "Đã mở chat");
+								Main.mainScreen.updateGroupJList();
 								break;
 							}
 							case "text from user to room": {
@@ -136,7 +152,15 @@ public class SocketController {
 							}
 						}
 					} catch (IOException e) {
-						e.printStackTrace();
+						JOptionPane.showMessageDialog(Main.mainScreen, "Server đã đóng, ứng dụng sẽ thoát", "Thông báo",
+								JOptionPane.INFORMATION_MESSAGE);
+						try {
+							Main.socketController.s.close();
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						System.exit(0);
 					}
 				});
 				receiveAndProcessThread.start();
@@ -215,6 +239,8 @@ public class SocketController {
 			sender.newLine();
 			sender.write(otherUser); // room name
 			sender.newLine();
+			sender.write("private"); // room name
+			sender.newLine();
 			sender.write("2");
 			sender.newLine();
 			sender.write(userName);
@@ -232,6 +258,8 @@ public class SocketController {
 			sender.write("request create room");
 			sender.newLine();
 			sender.write(groupName);
+			sender.newLine();
+			sender.write("group"); // room name
 			sender.newLine();
 			sender.write("" + (otherUsers.size() + 1));
 			sender.newLine();
@@ -259,6 +287,9 @@ public class SocketController {
 	}
 
 	public static String serverName(int port) {
+
+		if (!serverOnline(port))
+			return "";
 
 		try {
 			Socket s = new Socket("localhost", port);
