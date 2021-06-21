@@ -116,6 +116,7 @@ public class MessagePanel extends JPanel {
 			contentPanel.addMouseListener(new MouseAdapter() {
 				@Override
 				public void mouseClicked(MouseEvent e) {
+
 					Room room = Room.findRoom(Main.socketController.allRooms, MainScreen.chattingRoom);
 					int messageIndex = -1;
 					for (int i = 0; i < room.messages.size(); i++) {

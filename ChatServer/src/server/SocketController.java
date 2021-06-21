@@ -49,4 +49,17 @@ public class SocketController {
 			e.printStackTrace();
 		}
 	}
+
+	public static String getThisIP() {
+		String ip = "";
+		try {
+			Socket socket = new Socket();
+			socket.connect(new InetSocketAddress("google.com", 80));
+			ip = socket.getLocalAddress().getHostAddress();
+			socket.close();
+		} catch (IOException e) {
+			e.getStackTrace();
+		}
+		return ip;
+	}
 }

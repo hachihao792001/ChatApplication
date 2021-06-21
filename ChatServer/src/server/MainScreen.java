@@ -3,8 +3,6 @@ package server;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -26,12 +24,8 @@ public class MainScreen extends JFrame implements ActionListener {
 		JPanel mainContent = new JPanel(new GridBagLayout());
 		GBCBuilder gbc = new GBCBuilder(1, 1).setInsets(5);
 
-		JLabel ipLabel = new JLabel("IP: ");
-		try {
-			ipLabel.setText("IP: " + InetAddress.getLocalHost().getHostAddress());
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
+		JLabel ipLabel = new JLabel("IP: " + SocketController.getThisIP());
+
 		portLabel = new JLabel("Port: ");
 		portText = new JTextField();
 		serverNameLabel = new JLabel("Tên server: ");

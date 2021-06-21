@@ -250,9 +250,11 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 					try {
 						String newServerName = nickNameText.getText();
 						int newPort = Integer.parseInt(portText.getText());
+						String newIP = ipText.getText();
 
 						edittingServer.nickName = newServerName;
 						edittingServer.port = newPort;
+						edittingServer.ip = newIP;
 
 						FileManager.setServerList(serverList);
 
@@ -320,7 +322,8 @@ public class ConnectServerScreen extends JFrame implements ActionListener {
 			serverData.isOpen = SocketController.serverOnline(serverData.ip, serverData.port);
 			if (serverData.isOpen) {
 				serverData.realName = SocketController.serverName(serverData.ip, serverData.port);
-				serverData.connectAccountCount = SocketController.serverConnectedAccountCount(serverData.port);
+				serverData.connectAccountCount = SocketController.serverConnectedAccountCount(serverData.ip,
+						serverData.port);
 			}
 		}
 

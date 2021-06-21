@@ -28,7 +28,7 @@ public class SocketController {
 		try {
 			this.userName = name;
 			this.connectedServer = connectedServer;
-			s = new Socket("localhost", connectedServer.port);
+			s = new Socket(connectedServer.ip, connectedServer.port);
 			InputStream is = s.getInputStream();
 			receiver = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
 			OutputStream os = s.getOutputStream();
@@ -156,6 +156,7 @@ public class SocketController {
 								break;
 							}
 							case "response audio bytes": {
+
 								int fileSize = Integer.parseInt(receiver.readLine());
 
 								byte[] buffer = new byte[1024];
@@ -176,8 +177,7 @@ public class SocketController {
 								AudioController.play(receivedBytes.toByteArray());
 								break;
 							}
-							default:
-								break;
+
 							}
 						}
 					} catch (IOException e) {
@@ -284,7 +284,6 @@ public class SocketController {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
 	}
 
 	public String downloadToPath;
@@ -402,9 +401,9 @@ public class SocketController {
 		}
 	}
 
-	public static int serverConnectedAccountCount(int port) {
+	public static int serverConnectedAccountCount(String ip, int port) {
 		try {
-			Socket s = new Socket("localhost", port);
+			Socket s = new Socket(ip, port);
 			InputStream is = s.getInputStream();
 			BufferedReader receiver = new BufferedReader(new InputStreamReader(is));
 			OutputStream os = s.getOutputStream();

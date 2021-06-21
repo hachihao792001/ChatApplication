@@ -15,10 +15,6 @@ public class Room {
 		this.users = users;
 	}
 
-	public String getType() {
-		return users.size() > 1 ? "group" : "private";
-	}
-
 	public static Room findRoom(List<Room> roomList, int id) {
 		for (Room room : roomList)
 			if (room.id == id)

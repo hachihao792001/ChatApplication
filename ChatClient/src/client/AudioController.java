@@ -4,6 +4,8 @@ import java.io.*;
 import javax.sound.sampled.*;
 
 public class AudioController {
+	
+	//Tham khảo: https://stackoverflow.com/a/25813398
 
 	static Thread recordThread;
 	static ByteArrayOutputStream out;

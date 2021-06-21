@@ -174,6 +174,30 @@ public class ClientCommunicateThread extends Thread {
 					String fileName = thisClient.receiver.readLine();
 					int fileSize = Integer.parseInt(thisClient.receiver.readLine());
 
+					File filesFolder = new File("files");
+					if (!filesFolder.exists())
+						filesFolder.mkdir();
+
+					int dotIndex = fileName.lastIndexOf('.');
+					String saveFileName = "files/" + fileName.substring(0, dotIndex)
+							+ String.format("%02d%03d", roomID, roomMessagesCount) + fileName.substring(dotIndex);
+
+					File file = new File(saveFileName);
+					byte[] buffer = new byte[1024];
+					InputStream in = thisClient.socket.getInputStream();
+					OutputStream out = new FileOutputStream(file);
+
+					int receivedSize = 0;
+					int count;
+					while ((count = in.read(buffer)) > 0) {
+						out.write(buffer, 0, count);
+						receivedSize += count;
+						if (receivedSize >= fileSize)
+							break;
+					}
+
+					out.close();
+
 					Room room = Room.findRoom(Main.socketController.allRooms, roomID);
 					for (String user : room.users) {
 						Client currentClient = Client.findClient(Main.socketController.connectedClient, user);
@@ -189,30 +213,6 @@ public class ClientCommunicateThread extends Thread {
 							currentClient.sender.flush();
 						}
 					}
-
-					File filesFolder = new File("files");
-					if (!filesFolder.exists())
-						filesFolder.mkdir();
-
-					int dotIndex = fileName.lastIndexOf('.');
-					fileName = "files/" + fileName.substring(0, dotIndex)
-							+ String.format("%02d%03d", roomID, roomMessagesCount) + fileName.substring(dotIndex);
-
-					File file = new File(fileName);
-					byte[] buffer = new byte[1024];
-					InputStream in = thisClient.socket.getInputStream();
-					OutputStream out = new FileOutputStream(file);
-
-					int receivedSize = 0;
-					int count;
-					while ((count = in.read(buffer)) > 0) {
-						out.write(buffer, 0, count);
-						receivedSize += count;
-						if (receivedSize >= fileSize)
-							break;
-					}
-
-					out.close();
 					break;
 				}
 
@@ -221,22 +221,6 @@ public class ClientCommunicateThread extends Thread {
 					int roomMessagesCount = Integer.parseInt(thisClient.receiver.readLine());
 					int audioDuration = Integer.parseInt(thisClient.receiver.readLine());
 					int audioByteSize = Integer.parseInt(thisClient.receiver.readLine());
-
-					Room room = Room.findRoom(Main.socketController.allRooms, roomID);
-					for (String user : room.users) {
-						Client currentClient = Client.findClient(Main.socketController.connectedClient, user);
-						if (currentClient != null) {
-							currentClient.sender.write("audio from user to room");
-							currentClient.sender.newLine();
-							currentClient.sender.write(thisClient.userName);
-							currentClient.sender.newLine();
-							currentClient.sender.write("" + roomID);
-							currentClient.sender.newLine();
-							currentClient.sender.write("" + audioDuration);
-							currentClient.sender.newLine();
-							currentClient.sender.flush();
-						}
-					}
 
 					File filesFolder = new File("files");
 					if (!filesFolder.exists())
@@ -260,6 +244,21 @@ public class ClientCommunicateThread extends Thread {
 
 					out.close();
 
+					Room room = Room.findRoom(Main.socketController.allRooms, roomID);
+					for (String user : room.users) {
+						Client currentClient = Client.findClient(Main.socketController.connectedClient, user);
+						if (currentClient != null) {
+							currentClient.sender.write("audio from user to room");
+							currentClient.sender.newLine();
+							currentClient.sender.write(thisClient.userName);
+							currentClient.sender.newLine();
+							currentClient.sender.write("" + roomID);
+							currentClient.sender.newLine();
+							currentClient.sender.write("" + audioDuration);
+							currentClient.sender.newLine();
+							currentClient.sender.flush();
+						}
+					}
 					break;
 				}
 
@@ -327,6 +326,7 @@ public class ClientCommunicateThread extends Thread {
 					}
 					break;
 				}
+
 				}
 			}
 
